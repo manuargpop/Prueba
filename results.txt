@@ -1,0 +1,10 @@
+1.webp: Error 502 - {"detail":"Respuesta inválida del modelo de IA"}
+cb6be16d-8f0a-4833-85c3-e5dc36c6b6b3.jpg: Error 502 - {"detail":"Respuesta inválida del modelo de IA"}
+ci.jpg: Error 502 - {"detail":"Respuesta inválida del modelo de IA"}
+ci1.jpg: Error 502 - {"detail":"Respuesta inválida del modelo de IA"}
+ci2.jpg: Error 502 - {"detail":"Respuesta inválida del modelo de IA"}
+images (1).jpg: Error 500 - {"detail":"Error en LLM: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions"}
+images (2).jpg: Error 500 - {"detail":"Error en LLM: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions"}
+images (3).jpg: Error 502 - {"detail":"Respuesta inválida del modelo de IA"}
+images.jpg: Error 500 - {"detail":"Error en LLM: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions"}
+img5.jpg: Error 500 - {"detail":"Error en LLM: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions"}

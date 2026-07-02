@@ -25,16 +25,17 @@ def preprocess_image(img_bytes: bytes) -> np.ndarray:
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         raise HTTPException(400, "Imagen inválida o corrupta")
-
+    	
     height, width = img.shape[:2]
-    remove_x = width - int(width * 0.3)
+    # Hide 1/4 (25%) of the right side of the image
+    remove_x = int(width * 0.75)
     remove_y = 0
-    remove_w = width - remove_x
-    remove_h = int(height * 0.5)
-
+    remove_w = int(width * 0.25)
+    remove_h = height
+    
     processed = img.copy()
     cv2.rectangle(processed, (remove_x, remove_y), (width, remove_h), (255, 255, 255), thickness=-1)
-
+    
     _save_processed_image(processed)
     return processed
 

@@ -3,3 +3,4 @@ processed_images
 venv/Lib/site-packages/torch/lib/torch_cpu.dll
 venv/
 .venv/
+__pycache__/

@@ -19,12 +19,56 @@ def _save_processed_image(img: np.ndarray) -> Path:
         raise HTTPException(500, "No se pudo guardar la imagen procesada")
     return output_path
 
+def _crop_document(img: np.ndarray) -> np.ndarray:
+    """
+    Crop the image to remove background and keep only the document.
+    Uses edge detection and contour analysis to find the document boundaries.
+    """
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Apply Gaussian blur to reduce noise
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    # Edge detection
+    edges = cv2.Canny(blurred, 50, 150)
+
+    # Morphological operations to close gaps and connect edges
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+    dilated_edges = cv2.dilate(edges, kernel, iterations=3)
+    closed_edges = cv2.erode(dilated_edges, kernel, iterations=2)
+
+    # Find contours
+    contours, _ = cv2.findContours(closed_edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if contours:
+        # Get the largest contour (assumed to be the document)
+        largest_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(largest_contour)
+
+        # Add small padding (1%) to ensure we don't cut off content
+        pad_x = int(w * 0.01)
+        pad_y = int(h * 0.01)
+        x1 = max(0, x - pad_x)
+        y1 = max(0, y - pad_y)
+        x2 = min(img.shape[1], x + w + pad_x)
+        y2 = min(img.shape[0], y + h + pad_y)
+
+        # Only crop if the detected area is significantly smaller than the original
+        # This prevents unnecessary cropping when no background is detected
+        if w * h < img.shape[0] * img.shape[1] * 0.9:
+            return img[y1:y2, x1:x2]
+
+    # Return original image if no significant contour found
+    return img
 
 def preprocess_image(img_bytes: bytes) -> np.ndarray:
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         raise HTTPException(400, "Imagen inválida o corrupta")
+    
+    # Crop out background from the document photo
+    img = _crop_document(img)
     	
     height, width = img.shape[:2]
     # Hide 1/4 (25%) of the right side of the image

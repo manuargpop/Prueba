@@ -1,1 +1,40 @@
-Nothing needs to be added to .gitignore since only a Python source file (`test_opencv_filters.py`) was added, which is a source code file that should not be ignored.
+```
+# Image processing artifacts
+processed_images/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.env
+.env.local
+.env.*
+.venv.bak
+env.bak
+
+# Testing
+.coverage
+htmlcov/
+.coverage.*
+.cache
+.pytest_cache/
+.hypothesis/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+```

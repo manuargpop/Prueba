@@ -27,15 +27,20 @@ def _crop_document(img: np.ndarray) -> np.ndarray:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Apply Gaussian blur to reduce noise
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    _save_processed_image(blurred)
 
     # Edge detection
     edges = cv2.Canny(blurred, 50, 150)
+    _save_processed_image(edges)
 
     # Morphological operations to close gaps and connect edges
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     dilated_edges = cv2.dilate(edges, kernel, iterations=3)
+    _save_processed_image(dilated_edges)
+    
     closed_edges = cv2.erode(dilated_edges, kernel, iterations=2)
+    _save_processed_image(closed_edges)
 
     # Find contours
     contours, _ = cv2.findContours(closed_edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -56,7 +61,9 @@ def _crop_document(img: np.ndarray) -> np.ndarray:
         # Only crop if the detected area is significantly smaller than the original
         # This prevents unnecessary cropping when no background is detected
         if w * h < img.shape[0] * img.shape[1] * 0.9:
-            return img[y1:y2, x1:x2]
+            cropped = img[y1:y2, x1:x2]
+            _save_processed_image(cropped)
+            return cropped
 
     # Return original image if no significant contour found
     return img

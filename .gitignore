@@ -1,6 +1,1 @@
-processed_images
-.venv/Lib/site-packages/torch/lib/torch_cpu.dll
-venv/Lib/site-packages/torch/lib/torch_cpu.dll
-venv/
-.venv/
-__pycache__/
+Nothing needs to be added to .gitignore since only a Python source file (`test_opencv_filters.py`) was added, which is a source code file that should not be ignored.

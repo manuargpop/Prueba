@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Variant 09 Preprocessing Steps</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        h1 { text-align: center; color: #333; }
+        .image-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto; }
+        .image-card { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .image-card h3 { margin: 0 0 10px 0; color: #555; font-size: 16px; text-align: center; }
+        .step { margin-bottom: 15px; }
+        .step img { width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
+        .step-label { font-size: 12px; color: #666; margin-top: 5px; text-align: center; font-weight: bold; }
+        .original { background: #e3f2fd; }
+        .final { background: #e8f5e9; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Variant 09 Preprocessing Pipeline Steps</h1>
+    <div class="image-grid">
+        
+        <!-- Cedula -->
+        <div class="image-card original">
+            <h3>📄 cedula.jpg</h3>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula_01_original.png" alt="Original">
+                <div class="step-label">1. Original Input</div>
+            </div>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula_02_grayscale.png" alt="Grayscale">
+                <div class="step-label">2. Grayscale</div>
+            </div>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula_03_clahe.png" alt="CLAHE">
+                <div class="step-label">3. CLAHE Enhancement</div>
+            </div>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula_04_gaussian_blur_3x3.png" alt="Blur">
+                <div class="step-label">4. Gaussian Blur (3x3)</div>
+            </div>
+            <div class="step final">
+                <img src="processed_images/final_variant09_steps/cedula_05_adaptive_threshold.png" alt="Final">
+                <div class="step-label">5. Adaptive Threshold (OCR Ready)</div>
+            </div>
+        </div>
+
+        <!-- Cedula2 -->
+        <div class="image-card original">
+            <h3>📄 cedula2.jpg</h3>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula2_01_original.png" alt="Original">
+                <div class="step-label">1. Original Input</div>
+            </div>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula2_02_grayscale.png" alt="Grayscale">
+                <div class="step-label">2. Grayscale</div>
+            </div>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula2_03_clahe.png" alt="CLAHE">
+                <div class="step-label">3. CLAHE Enhancement</div>
+            </div>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula2_04_gaussian_blur_3x3.png" alt="Blur">
+                <div class="step-label">4. Gaussian Blur (3x3)</div>
+            </div>
+            <div class="step final">
+                <img src="processed_images/final_variant09_steps/cedula2_05_adaptive_threshold.png" alt="Final">
+                <div class="step-label">5. Adaptive Threshold (OCR Ready)</div>
+            </div>
+        </div>
+
+        <!-- Cedula3 -->
+        <div class="image-card original">
+            <h3>📄 cedula3.jpg</h3>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula3_01_original.png" alt="Original">
+                <div class="step-label">1. Original Input</div>
+            </div>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula3_02_grayscale.png" alt="Grayscale">
+                <div class="step-label">2. Grayscale</div>
+            </div>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula3_03_clahe.png" alt="CLAHE">
+                <div class="step-label">3. CLAHE Enhancement</div>
+            </div>
+            <div class="step">
+                <img src="processed_images/final_variant09_steps/cedula3_04_gaussian_blur_3x3.png" alt="Blur">
+                <div class="step-label">4. Gaussian Blur (3x3)</div>
+            </div>
+            <div class="step final">
+                <img src="processed_images/final_variant09_steps/cedula3_05_adaptive_threshold.png" alt="Final">
+                <div class="step-label">5. Adaptive Threshold (OCR Ready)</div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

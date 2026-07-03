@@ -1,6 +1,6 @@
-processed_images
-.venv/Lib/site-packages/torch/lib/torch_cpu.dll
-venv/Lib/site-packages/torch/lib/torch_cpu.dll
-venv/
-.venv/
-__pycache__/
+# Image processing outputs
+processed_images/
+*.png
+
+# HTML outputs
+*.html

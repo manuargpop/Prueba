@@ -12,7 +12,7 @@ async def process_file(file: UploadFile, doc_type: str) -> dict:
     content_type = file.content_type or ""
     if not content_type.startswith("image/"):
         filename = file.filename or ""
-        if not filename.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".gif", ".webp")):
+        if not filename.lower().endswith((".png", ".pdf", ".jpg", ".jpeg", ".bmp", ".tiff", ".gif", ".webp")):
             raise HTTPException(400, f"Solo se aceptan imágenes para {doc_type}")
 
     content = await file.read()

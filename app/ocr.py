@@ -66,68 +66,78 @@ def _crop_document(img: np.ndarray) -> np.ndarray:
     img = _downscale_high_quality_image(img)
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # _save_processed_image_step(gray, "01_grayscale")
+    _save_processed_image_step(gray, "01_grayscale")
 
     # Apply Gaussian blur to reduce noise
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-    # _save_processed_image_step(blurred, "02_gaussian_blur")
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    _save_processed_image_step(blurred, "02_gaussian_blur")
 
     # Edge detection
-    edges = cv2.Canny(blurred, 50, 150)
-    # _save_processed_image_step(edges, "03_canny_edges")
+    edges = cv2.Canny(blurred, 50, 100, 5)
+    _save_processed_image_step(edges, "03_canny_edges")
 
     # Morphological operations to close gaps and connect edges
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     dilated_edges = cv2.dilate(edges, kernel, iterations=3)
-    # _save_processed_image_step(dilated_edges, "04_dilated_edges")
+    _save_processed_image_step(dilated_edges, "04_dilated_edges")
 
     closed_edges = cv2.erode(dilated_edges, kernel, iterations=2)
-    # _save_processed_image_step(closed_edges, "05_closed_edges")
+    _save_processed_image_step(closed_edges, "05_closed_edges")
 
-    # Find contours - use RETR_TREE to get all hierarchy levels
-    contours, hierarchy = cv2.findContours(closed_edges.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # Find contours - use RETR_EXTERNAL to get only outermost contours
+    contours, hierarchy = cv2.findContours(closed_edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Create a copy for visualization
     contours_img = img.copy()
     cv2.drawContours(contours_img, contours, -1, (0, 255, 0), 2)
-    # _save_processed_image_step(contours_img, "06_all_contours")
+    _save_processed_image_step(contours_img, "06_all_contours")
 
     if contours:
-        # Filter contours by area to remove small noise
-        min_area = img.shape[0] * img.shape[1] * 0.05  # At least 5% of image area
-        large_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
+        # Sort contours by area in descending order
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
-        if large_contours:
-            # Get the largest contour by area
-            largest_contour = max(large_contours, key=cv2.contourArea)
+        # Get image dimensions for ratio calculations
+        img_area = img.shape[0] * img.shape[1]
 
-            # Approximate the contour to a polygon to get cleaner edges
-            epsilon = 0.02 * cv2.arcLength(largest_contour, True)
-            approx = cv2.approxPolyDP(largest_contour, epsilon, True)
+        # Try the largest contours until we find a valid document boundary
+        for contour in contours[:5]:  # Check top 5 largest contours
+            # Filter contours by area - must be at least 10% of image area
+            # This ensures we skip small noise but don't reject valid documents
+            min_area = img_area * 0.10
+            if cv2.contourArea(contour) < min_area:
+                continue
 
-            # If we have a quadrilateral or more points, use bounding rect
-            # Otherwise fall back to the original contour's bounding rect
-            if len(approx) >= 4:
-                x, y, w, h = cv2.boundingRect(approx)
-            else:
-                x, y, w, h = cv2.boundingRect(largest_contour)
+            # Approximate the contour to a polygon
+            epsilon = 0.02 * cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, epsilon, True)
 
-            # Add small padding (1%) to ensure we don't cut off content
-            pad_x = int(w * 0.01)
-            pad_y = int(h * 0.01)
-            x1 = max(0, x - pad_x)
-            y1 = max(0, y - pad_y)
-            x2 = min(img.shape[1], x + w + pad_x)
-            y2 = min(img.shape[0], y + h + pad_y)
+            # Get bounding rectangle
+            x, y, w, h = cv2.boundingRect(approx)
 
-            # Only crop if the detected area is significantly smaller than the original
-            # This prevents unnecessary cropping when no background is detected
-            if w * h < img.shape[0] * img.shape[1] * 0.9:
-                cropped = img[y1:y2, x1:x2]
-                # _save_processed_image_step(cropped, "07_cropped_document")
-                return cropped
+            # Validate the contour represents a reasonable document shape
+            aspect_ratio = w / float(h)
+            area_ratio = cv2.contourArea(contour) / (w * h)  # How filled the bounding box is
+            contour_area = cv2.contourArea(contour)
 
-    # Return original image if no significant contour found
+            # Document should have reasonable aspect ratio and fill most of its bounding box
+            # Also check that contour area is reasonable compared to image area
+            if 0.5 <= aspect_ratio <= 3.0 and area_ratio > 0.5:
+                # Add small padding (1%) to ensure we don't cut off content
+                pad_x = int(w * 0.01)
+                pad_y = int(h * 0.01)
+                x1 = max(0, x - pad_x)
+                y1 = max(0, y - pad_y)
+                x2 = min(img.shape[1], x + w + pad_x)
+                y2 = min(img.shape[0], y + h + pad_y)
+
+                # Only crop if the detected area is significantly smaller than the original
+                # This prevents unnecessary cropping when document already fills the frame
+                if w * h < img_area * 0.95:
+                    cropped = img[y1:y2, x1:x2]
+                    _save_processed_image_step(cropped, "07_cropped_document")
+                    return cropped
+
+    # Return original image if no valid document contour found
     return img
 
 def preprocess_image(img_bytes: bytes) -> np.ndarray:

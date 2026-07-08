@@ -10,14 +10,19 @@ router = APIRouter(prefix="/api/v1")
 
 async def process_file(file: UploadFile, doc_type: str) -> dict:
     content_type = file.content_type or ""
-    if not content_type.startswith("image/"):
-        filename = file.filename or ""
-        if not filename.lower().endswith((".png", ".pdf", ".jpg", ".jpeg", ".bmp", ".tiff", ".gif", ".webp")):
-            raise HTTPException(400, f"Solo se aceptan imágenes para {doc_type}")
+    filename = file.filename or ""
+
+    valid_extensions = (".png", ".pdf", ".jpg", ".jpeg", ".bmp", ".tiff", ".gif", ".webp")
+    is_image = content_type.startswith("image/")
+    is_pdf = content_type == "application/pdf" or filename.lower().endswith(".pdf")
+
+    if not is_image and not is_pdf:
+        if not filename.lower().endswith(valid_extensions):
+            raise HTTPException(400, f"Solo se aceptan imágenes y PDFs para {doc_type}")
 
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(400, f"Imagen {doc_type} mayor a 10MB")
+        raise HTTPException(400, f"Archivo {doc_type} mayor a 10MB")
 
     raw_text = extract_raw_text(content)
     print(f"Raw OCR Text ({doc_type}):", raw_text)

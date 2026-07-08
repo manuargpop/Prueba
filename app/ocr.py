@@ -4,9 +4,39 @@ from fastapi import HTTPException
 import easyocr
 from pathlib import Path
 from datetime import datetime
-
+from pdf2image import convert_from_bytes
 
 reader = easyocr.Reader(["es"], gpu=False, verbose=False)
+
+def _convert_pdf_to_image(img_bytes: bytes) -> bytes:
+    """
+    Convert PDF bytes to PNG image bytes.
+    Uses pdf2image with Poppler to render the first page at 300 DPI.
+    Returns PNG format for optimal OCR quality.
+    """
+    try:
+        # Convert first page of PDF to PIL Image at 300 DPI (optimal for OCR)
+        images = convert_from_bytes(img_bytes, dpi=300, first_page=1, last_page=1)
+
+        if not images:
+            raise HTTPException(400, "PDF vacío o inválido")
+
+        # Get first page only (we process one document at a time)
+        pil_image = images[0]
+
+        # Convert PIL Image to bytes in PNG format (lossless, best for OCR)
+        from io import BytesIO
+        buffer = BytesIO()
+        pil_image.save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    except Exception as e:
+        raise HTTPException(400, f"Error al procesar PDF: {str(e)}")
+
+
+def _is_pdf_content(img_bytes: bytes) -> bool:
+    """Check if the content is a PDF by looking at the magic bytes."""
+    return img_bytes[:4] == b'%PDF'
 
 # esta funcion es solo para debugg, se comenta los llamados a esta para el pase a produccion
 def _save_processed_image_step(img: np.ndarray, step_name: str) -> Path:
@@ -141,12 +171,16 @@ def _crop_document(img: np.ndarray) -> np.ndarray:
     return img
 
 def preprocess_image(img_bytes: bytes) -> np.ndarray:
+    # Check if content is PDF and convert to image if needed
+    if _is_pdf_content(img_bytes):
+        img_bytes = _convert_pdf_to_image(img_bytes)
+
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         raise HTTPException(400, "Imagen inválida o corrupta")
     
-    # Crop out background from the document photo
+    # Crop out background from the document photo.
     img = _crop_document(img)
     	
     height, width = img.shape[:2]

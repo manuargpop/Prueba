@@ -5,7 +5,7 @@ import os
 url = "http://localhost:8000/api/v1/extract-id"
 
 # Extensiones de imagen válidas
-image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif', '.webp')
+image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif', '.webp', '.pdf')
 
 # Archivo de salida
 output_file = "results.txt"

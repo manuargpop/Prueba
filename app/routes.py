@@ -14,7 +14,7 @@ async def process_file(file: UploadFile, doc_type: str) -> dict:
 
     valid_extensions = (".png", ".pdf", ".jpg", ".jpeg", ".bmp", ".tiff", ".gif", ".webp")
     is_image = content_type.startswith("image/")
-    is_pdf = content_type == "application/pdf" or filename.lower().endswith(".pdf")
+    is_pdf = content_type in ("application/pdf", "application/x-pdf") or filename.lower().endswith(".pdf")
 
     if not is_image and not is_pdf:
         if not filename.lower().endswith(valid_extensions):

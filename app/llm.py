@@ -108,8 +108,8 @@ def call_llm(raw_text: str, doc_type: str = "cedula") -> str:
         "json": {
             "model": settings.GROQ_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.1,
-            "max_tokens": 256,
+            "temperature": 0.0,
+            "max_tokens": 1024,
         },
         "timeout": 30,
         "verify": settings.GROQ_VERIFY_SSL,

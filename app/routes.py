@@ -24,7 +24,7 @@ async def process_file(file: UploadFile, doc_type: str) -> dict:
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(400, f"Archivo {doc_type} mayor a 10MB")
 
-    raw_text = extract_raw_text(content)
+    raw_text = extract_raw_text(content, doc_type)
     print(f"Raw OCR Text ({doc_type}):", raw_text)
 
     llm_output = call_llm(raw_text, doc_type)

@@ -73,8 +73,64 @@ Salida: {{"cedula_ven":true,"cedula":"E81241717","nombre":"GLADYS OLIVIA","apell
 """
 
 def build_prompt_rif(raw_text: str) -> str:
-    # DEJADO VACÍO COMO SOLICITASTE
-    return ""
+    return f"""
+Eres un asistente experto en normalización y extracción de datos de documentos fiscales a partir de texto OCR, con especialización en RIF (Registro Único de Información Fiscal) de Venezuela.
+
+TEXTO OCR DE ENTRADA:
+{raw_text}
+
+INSTRUCCIONES:
+
+1. CLASIFICACIÓN DEL DOCUMENTO:
+- Analiza el texto para determinar si corresponde a un RIF venezolano.
+- Indicadores de RIF venezolano: "REGISTRO ÚNICO DE INFORMACIÓN FISCAL", "RIF", "SENIAT", formato de RIF con letra inicial (V/E/J/G) + 9 dígitos.
+- Si el texto NO corresponde a un RIF o no se puede determinar: establece `rif_valido: false` pero CONTINÚA con la extracción de todos los campos posibles.
+- Solo si el texto es completamente irreconocible, no es un documento fiscal, o está vacío: devuelve todos los campos en null y `rif_valido: false`.
+
+2. EXTRACCIÓN Y NORMALIZACIÓN (aplica en todos los casos):
+- rif: Formato con letra inicial (V, E, J, G) + 9 dígitos. Limpia espacios, puntos, comas. La letra indica: V=Venezolano, E=Extranjero, J=Jurídica, G=Gubernamental.
+- nombre: Conserva caracteres originales. Elimina ruido OCR (@, #, *, espacios dobles). Normaliza a MAYÚSCULAS. No inventes ni completes. Puede ser nombre de persona natural o razón social de empresa.
+- direccion: Extrae la dirección completa del domicilio fiscal. Incluye calles, edificios, pisos, apartamentos, sectores, etc. Normaliza a MAYÚSCULAS.
+- ciudad: Extrae la ciudad/municipio. Normaliza a MAYÚSCULAS.
+- estado: Extrae el estado. Normaliza a MAYÚSCULAS.
+- fecha_vencimiento: Formato "DD/MM/AAAA". Busca "FECHA DE VENCIMIENTO" o "VENCIMIENTO". Si es ilegible: null.
+- expiro: Si la fecha de vencimiento es idéntica o menor a la fecha actual devuelve true, de lo contrario false. Si no hay fecha: null.
+
+3. FILTRADO DE RUIDO:
+- MUY IMPORTANTE: Ignora EXPLÍCITAMENTE el texto de pie de página (footer) como: "La validez de este Comprobante debe verificarse través de la dirección www.seniat.gob.ve", "Sistemas en", "Comprobante Digital RIF", "No requiere sello húmedo", "GERENCIA REGIONAL DE TRIBUTOS INTERNOS", nombres de oficinas del SENIAT.
+- Ignora también notas sobre retención de impuestos, agentes de retención, exoneraciones, y cualquier texto institucional que no sea parte de los datos del contribuyente.
+- El RIF y el nombre suelen estar cercanos uno del otro. Ejemplo: "V278424924 MANUEL ALEXANDER VALBUENA RODRIGUEZ".
+- El domicilio fiscal suele tener este orden: direccion, ciudad, estado. Ejemplo: "CALLE CALLE 73 EDIF HALEAKALA PISO PB APT APTO. 3 SECTOR LA LAGO MARACAIBO ZULIA".
+
+4. FORMATO DE SALIDA (ESTRICTO):
+- Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta.
+- Si un campo no está presente o es ilegible, asigna null.
+- NO uses bloques de código (```json), NO añadas explicaciones, NO incluyas texto antes o después del JSON.
+
+{{
+  "rif_valido": "bool",
+  "rif": "string o null",
+  "nombre": "string o null",
+  "estado": "string o null",
+  "ciudad": "string o null",
+  "direccion": "string o null",
+  "expiro": "bool o null"
+}}
+
+EJEMPLOS:
+
+Entrada (RIF de persona natural):
+OCR: Republica Bolivariana de Venezuela SENIAT REGISTRO ÚNICO DE INFORMACIÓN FISCAL (RIF) V278424924 MANUEL ALEXANDER VALBUENA RODRIGUEZ FECHA DE INSCRIPCION DOMICILIO FISCAL CALLE CALLE 73 EDIF HALEAKALA PISO PB APT APTO. 3 SECTOR LA LAGO MARACAIBO ZULIA ZONA POSTAL 4001 FECHA DE VENCIMIENTO 15/12/2025
+Salida: {{"rif_valido":true,"rif":"V278424924","nombre":"MANUEL ALEXANDER VALBUENA RODRIGUEZ","estado":"ZULIA","ciudad":"MARACAIBO","direccion":"CALLE CALLE 73 EDIF HALEAKALA PISO PB APT APTO. 3 SECTOR LA LAGO","expiro":false}}
+
+Entrada (RIF de empresa):
+OCR: REPUBLICA BOLIVARIANA DE VENEZUELA SENIAT REGISTRO UNICO DE INFORMACION FISCAL J123456789 EMPRESA EJEMPLO C.A. DOMICILIO FISCAL AV PRINCIPAL EDIF CORPORATIVO PISO 5 CARACAS DISTRITO CAPITAL VENCIMIENTO 30/06/2024
+Salida: {{"rif_valido":true,"rif":"J123456789","nombre":"EMPRESA EJEMPLO C.A.","estado":"DISTRITO CAPITAL","ciudad":"CARACAS","direccion":"AV PRINCIPAL EDIF CORPORATIVO PISO 5","expiro":true}}
+
+Entrada (documento irreconocible):
+OCR: factura de servicios publicos numero 445-22
+Salida: {{"rif_valido":false,"rif":null,"nombre":null,"estado":null,"ciudad":null,"direccion":null,"expiro":null}}
+"""
 
 def build_prompt_carnet(raw_text: str) -> str:
     # DEJADO VACÍO COMO SOLICITASTE

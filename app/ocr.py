@@ -170,7 +170,7 @@ def _crop_document(img: np.ndarray) -> np.ndarray:
     # Return original image if no valid document contour found
     return img
 
-def preprocess_image(img_bytes: bytes) -> np.ndarray:
+def preprocess_image(img_bytes: bytes, doc_type) -> np.ndarray:
     # Check if content is PDF and convert to image if needed
     if _is_pdf_content(img_bytes):
         img_bytes = _convert_pdf_to_image(img_bytes)
@@ -182,23 +182,28 @@ def preprocess_image(img_bytes: bytes) -> np.ndarray:
     
     # Crop out background from the document photo.
     img = _crop_document(img)
-    	
-    height, width = img.shape[:2]
-    # Hide 1/4 (25%) of the right side of the image
-    remove_x = int(width * 0.75)
-    remove_y = 0
-    remove_w = int(width * 0.25)
-    remove_h = height
-    
-    processed = img.copy()
-    cv2.rectangle(processed, (remove_x, remove_y), (width, remove_h), (255, 255, 255), thickness=-1)
-    
-    _save_processed_image(processed)
-    return processed
+
+    # Only apply white mask to hide footer data for cédula documents
+    # RIF and carnet documents need their full content visible
+    if doc_type == "cedula":
+        height, width = img.shape[:2]
+        # Hide 1/4 (25%) of the right side of the image
+        remove_x = int(width * 0.75)
+        remove_y = 0
+        remove_w = int(width * 0.25)
+        remove_h = height
+
+        processed = img.copy()
+        cv2.rectangle(processed, (remove_x, remove_y), (width, remove_h), (255, 255, 255), thickness=-1)
+        _save_processed_image(processed)
+        return processed
+
+    _save_processed_image(img)
+    return img
 
 
-def extract_raw_text(img_bytes: bytes) -> str:
-    processed = preprocess_image(img_bytes)
+def extract_raw_text(img_bytes: bytes, doc_type: str = "cedula") -> str:
+    processed = preprocess_image(img_bytes, doc_type)
     ocr_result = reader.readtext(processed, detail=1, paragraph=False)
     if not ocr_result:
         raise HTTPException(422, "No se detectó texto en la imagen")

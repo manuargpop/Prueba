@@ -24,7 +24,7 @@ class CedulaData(BaseModel):
         return clean if re.match(r"^[VE]\d{7,8}$", clean) else v
 
 class RifData(BaseModel):
-    
+
     rif_valido: Optional[bool] = None
     rif: Optional[str] = None
     nombre: Optional[str] = None
@@ -44,8 +44,24 @@ class RifData(BaseModel):
         return clean if re.match(r"^[VEJG]\d{9}$", clean) else v
 
 class CarnetData(BaseModel):
+    # tiene que tener cantidad de pasajeros y placa ademas de cedula o rif
     # Placeholder vacío, rellena los campos cuando tengas tu prompt listo
     placa: Optional[str] = None
+    cedula_rif: Optional[str] = None
+    pasajeros: Optional[int] = None
+    placa: Optional[str] = None
+
+    @field_validator("cedula_rif")
+    @classmethod
+    def clean_cedula_rif(cls, v):
+        if not v:
+            return None
+        # Remove all non-alphanumeric characters except V, E, J, G and digits
+        clean = re.sub(r"[^VEJGvejg0-9]", "", v).upper()
+        # Validate: either cédula (V/E + 7-8 digits) or RIF (V/E/J/G + 9 digits)
+        if re.match(r"^[VE]\d{7,8}$", clean) or re.match(r"^[VEJG]\d{9}$", clean):
+            return clean
+        return v
 
 class ExtractResponse(BaseModel):
     ceddoc: Optional[CedulaData] = None

@@ -133,8 +133,62 @@ Salida: {{"rif_valido":false,"rif":null,"nombre":null,"estado":null,"ciudad":nul
 """
 
 def build_prompt_carnet(raw_text: str) -> str:
-    # DEJADO VACÍO COMO SOLICITASTE
-    return ""
+    return f"""
+Eres un asistente experto en normalización y extracción de datos de documentos vehiculares a partir de texto OCR, con especialización en el Certificado de Registro de Vehículo (Carnet de Circulación) de Venezuela emitido por el INTT.
+
+TEXTO OCR DE ENTRADA:
+{raw_text}
+
+INSTRUCCIONES:
+
+1. CLASIFICACIÓN DEL DOCUMENTO:
+- Analiza el texto para determinar si corresponde a un Carnet de Circulación / Certificado de Registro de Vehículo venezolano.
+- Indicadores de carnet válido: "INTT", "INSTITUTO NACIONAL DE TRANSPORTE TERRESTRE", "CERTIFICADO DE REGISTRO DE VEHÍCULO", "CERTIFICADO DE CIRCULACIÓN", campos típicos como Placa, Serial, Carrozado, Motor, Modelo, Marca, Año, Color, Nro. Puestos/PTOS.
+- Si el texto NO corresponde a un carnet vehicular o no se puede determinar: establece `carnet_valido: false` pero CONTINÚA con la extracción de todos los campos posibles.
+- Solo si el texto es completamente irreconocible, no es un documento vehicular, o está vacío: devuelve todos los campos en null y `carnet_valido: false`.
+
+2. EXTRACCIÓN Y NORMALIZACIÓN (aplica en todos los casos):
+- placa: Formato típico venezolano: 2-3 letras seguidas de 4-6 dígitos, o combinaciones alfanuméricas (ej: AD313UV, ABC123, A123BC). Limpia espacios, puntos, comas. Normaliza a MAYÚSCULAS. No inventes caracteres.
+- cedula_rif: Formato con letra inicial (V, E, J, G) seguida de 7-9 dígitos. Puede aparecer como "Cédula", "RIF", "CÉDULA O RIF". Limpia espacios, puntos, comas. La letra indica: V=Venezolano, E=Extranjero, J=Jurídica, G=Gubernamental.
+- pasajeros: Número entero que indica la capacidad de puestos del vehículo. Busca cerca de "Nro. Puestos", "PTOS", "PUESTOS", "CAPACIDAD". Si aparece como "5 PTOS" o "Nro. Puestos: 5", extrae solo el número (5). Si es ilegible o no aparece: null.
+- expiro: Este campo NO APLICA para carnets de circulación. Siempre devuelve null.
+
+3. FILTRADO DE RUIDO:
+- MUY IMPORTANTE: Ignora EXPLÍCITAMENTE el texto institucional repetitivo como: "INTT", "INSTITUTO NACIONAL DE TRANSPORTE TERRESTRE", "Gobierno Bolivariano de Venezuela", "Ministerio del Poder Popular para el Transporte", "SEREFICAP", "Certificado de Circulación Para ser archivado en lugar seguro", "Necesario para salir del Territorio Nacional", "Este documento acredita propiedad sobre el vehículo", "Debe ser impreso color y solo en papel BOND blanco", "Se recomienda plastificar este carnet", números de autorización largos, códigos de verificación, hashes, timestamps repetidos.
+- El mismo valor (placa, cédula/rif, serial) puede aparecer 2-3 veces en diferentes secciones del documento. Usa la primera ocurrencia clara y consistente. Si hay discrepancias, prioriza la versión que aparece en la sección principal de datos del vehículo.
+- Ignora textos como "TC: GAS", "Carrozado", "Serial Chasis", "Serial Motor", "NIV", "Color", "Marca", "Modelo", "Año", "Clase", "Tipo", "Uso", "Servicio", "Carga", "Tara", "Ejes" a menos que sean necesarios para confirmar que es un carnet válido. Solo extrae placa, cedula_rif y pasajeros.
+- Los valores de cedula_rif y placa suelen estar cerca del nombre del propietario. Ejemplo: "YOLEMAR TERESA GALLARDO PEROZO Cédula O RIF: V19215064 Placa: AD313UV".
+
+4. FORMATO DE SALIDA (ESTRICTO):
+- Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta.
+- Si un campo no está presente o es ilegible, asigna null.
+- NO uses bloques de código (```json), NO añadas explicaciones, NO incluyas texto antes o después del JSON.
+
+{{
+  "carnet_valido": "bool",
+  "placa": "string o null",
+  "cedula_rif": "string o null",
+  "pasajeros": "int o null"
+}}
+
+EJEMPLOS:
+
+Entrada (carnet válido):
+OCR: INTT INSTITUTO NACIONAL DE TRANSPORTE TERRESTRE CERTIFICADO DE REGISTRO DE VEHÍCULO YOLEMAR TERESA GALLARDO PEROZO Cédula O RIF: V19215064 Placa: AD313UV Serial 8X7F1B117CD004432 Nro. Puestos: 5 PTOS CHERY ARAUCA 2012 PLATA AUTOMOVIL PARTICULAR
+Salida: {{"carnet_valido":true,"placa":"AD313UV","cedula_rif":"V19215064","pasajeros":5}}
+
+Entrada (carnet con formato alternativo):
+OCR: CERTIFICADO DE CIRCULACIÓN INTT Placa ABC123 Propietario JUAN PEREZ RIF: V12345678 Capacidad 7 Puestos Serial Motor SQRA73FAFCC02027 Uso PARTICULAR
+Salida: {{"carnet_valido":true,"placa":"ABC123","cedula_rif":"V12345678","pasajeros":7}}
+
+Entrada (documento irreconocible):
+OCR: factura de servicios publicos numero 445-22
+Salida: {{"carnet_valido":false,"placa":null,"cedula_rif":null,"pasajeros":null}}
+
+Entrada (carnet con ruido y valores repetidos):
+OCR: INTT INTT 220108199862 AD313UV BX7FIB117CD004432 YOLEMAR TERESA GALLARDO PEROZO V19215064 CHERY ARAUCA 2012 PLATA AUTOMOVIL HATCH BACK PARTICULAR 5 PTOS Nro. Puestos: 5 Gobierno Bolivariano de Venezuela Ministerio del Transporte Certificado de Circulación Para ser archivado en lugar seguro Válido para transitar con el vehículo en el Territorio Nacional Placa AD313UV
+Salida: {{"carnet_valido":true,"placa":"AD313UV","cedula_rif":"V19215064","pasajeros":5}}
+"""
 
 def get_prompt(doc_type: str, raw_text: str) -> str:
     if doc_type == "cedula":
@@ -165,7 +219,7 @@ def call_llm(raw_text: str, doc_type: str = "cedula") -> str:
             "model": settings.GROQ_MODEL,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.0,
-            "max_tokens": 1024,
+            "max_tokens": 1500,
         },
         "timeout": 30,
         "verify": settings.GROQ_VERIFY_SSL,

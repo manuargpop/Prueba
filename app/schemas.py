@@ -46,7 +46,7 @@ class RifData(BaseModel):
 class CarnetData(BaseModel):
     # tiene que tener cantidad de pasajeros y placa ademas de cedula o rif
     # Placeholder vacío, rellena los campos cuando tengas tu prompt listo
-    placa: Optional[str] = None
+    carnet_valido: Optional[bool] = None
     cedula_rif: Optional[str] = None
     pasajeros: Optional[int] = None
     placa: Optional[str] = None

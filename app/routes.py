@@ -1,12 +1,29 @@
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
-from .ocr import extract_raw_text
-from .llm import call_llm
+from .ocr import encode_image_to_base64
+from .llm import call_llm_with_image
 from .schemas import CedulaData, RifData, CarnetData
 import json
+import re
 
 router = APIRouter(prefix="/api/v1")
+
+def extract_json_from_response(llm_output: str) -> str:
+    """Extract clean JSON from LLM response, removing thinking tags and markdown."""
+    # Remove <think>...</think> blocks
+    cleaned = re.sub(r'<think>.*?</think>', '', llm_output, flags=re.DOTALL)
+
+    # Remove markdown code blocks
+    cleaned = cleaned.replace("```json", "").replace("```", "")
+    cleaned = cleaned.strip()
+
+    # Try to find JSON object between { and }
+    match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+    if match:
+        return match.group(0)
+
+    return cleaned
 
 async def process_file(file: UploadFile, doc_type: str) -> dict:
     content_type = file.content_type or ""
@@ -24,17 +41,20 @@ async def process_file(file: UploadFile, doc_type: str) -> dict:
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(400, f"Archivo {doc_type} mayor a 10MB")
 
-    raw_text = extract_raw_text(content, doc_type)
-    print(f"Raw OCR Text ({doc_type}):", raw_text)
+    # Encode image to base64 for vision model
+    image_base64 = encode_image_to_base64(content, doc_type)
 
-    llm_output = call_llm(raw_text, doc_type)
-    json_str = llm_output.replace("```json", "").replace("```", "").strip()
-    
+    # Call vision model with image
+    llm_output = call_llm_with_image(image_base64, doc_type)
+
+    # Extract clean JSON from response
+    json_str = extract_json_from_response(llm_output)
+
     try:
         data_dict = json.loads(json_str)
-    except json.JSONDecodeError:
-        raise HTTPException(502, f"Respuesta inválida del modelo de IA para {doc_type}")
-        
+    except json.JSONDecodeError as e:
+        raise HTTPException(502, f"Respuesta inválida del modelo de IA para {doc_type}: {str(e)}")
+
     return data_dict
 
 @router.post("/extract-documents")
@@ -53,11 +73,11 @@ async def extract_documents(
     if ceddoc:
         data_dict = await process_file(ceddoc, "cedula")
         result["ceddoc"] = CedulaData(**data_dict).model_dump()
-        
+
     if rifnat:
         data_dict = await process_file(rifnat, "rif")
         result["rifnat"] = RifData(**data_dict).model_dump()
-        
+
     if cardoc:
         data_dict = await process_file(cardoc, "carnet")
         result["cardoc"] = CarnetData(**data_dict).model_dump()

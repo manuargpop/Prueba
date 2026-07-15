@@ -1,12 +1,14 @@
 import cv2
 import numpy as np
 from fastapi import HTTPException
-import easyocr
+# import easyocr
 from pathlib import Path
 from datetime import datetime
 from pdf2image import convert_from_bytes
+import base64
+from io import BytesIO
 
-reader = easyocr.Reader(["es"], gpu=False, verbose=False)
+# reader = easyocr.Reader(["es"], gpu=False, verbose=False)
 
 def _convert_pdf_to_image(img_bytes: bytes) -> bytes:
     """
@@ -25,7 +27,6 @@ def _convert_pdf_to_image(img_bytes: bytes) -> bytes:
         pil_image = images[0]
 
         # Convert PIL Image to bytes in PNG format (lossless, best for OCR)
-        from io import BytesIO
         buffer = BytesIO()
         pil_image.save(buffer, format="PNG")
         return buffer.getvalue()
@@ -170,6 +171,7 @@ def _crop_document(img: np.ndarray) -> np.ndarray:
     # Return original image if no valid document contour found
     return img
 
+
 def preprocess_image(img_bytes: bytes, doc_type) -> np.ndarray:
     # Check if content is PDF and convert to image if needed
     if _is_pdf_content(img_bytes):
@@ -179,7 +181,7 @@ def preprocess_image(img_bytes: bytes, doc_type) -> np.ndarray:
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         raise HTTPException(400, "Imagen inválida o corrupta")
-    
+
     # Crop out background from the document photo.
     img = _crop_document(img)
 
@@ -202,9 +204,37 @@ def preprocess_image(img_bytes: bytes, doc_type) -> np.ndarray:
     return img
 
 
-def extract_raw_text(img_bytes: bytes, doc_type: str = "cedula") -> str:
-    processed = preprocess_image(img_bytes, doc_type)
-    ocr_result = reader.readtext(processed, detail=1, paragraph=False)
-    if not ocr_result:
-        raise HTTPException(422, "No se detectó texto en la imagen")
-    return " ".join([line[1] for line in ocr_result])
+# def extract_raw_text(img_bytes: bytes, doc_type: str = "cedula") -> str:
+#     processed = preprocess_image(img_bytes, doc_type)
+#     ocr_result = reader.readtext(processed, detail=1, paragraph=False)
+#     if not ocr_result:
+#         raise HTTPException(422, "No se detectó texto en la imagen")
+#     return " ".join([line[1] for line in ocr_result])
+
+
+def encode_image_to_base64(img_bytes: bytes, doc_type: str = "cedula") -> str:
+    """
+    Encode image bytes to base64 string for sending to vision model.
+    Preprocesses image (PDF conversion, cropping, cleaning) before encoding.
+
+    Args:
+        img_bytes: Raw image or PDF bytes
+        doc_type: Type of document (cedula, rif, carnet)
+
+    Returns:
+        Base64 encoded image string
+    """
+    try:
+        # Preprocess image: convert PDF if needed, crop document, apply masks
+        processed_img = preprocess_image(img_bytes, doc_type)
+
+        # Convert numpy array back to bytes
+        _, buffer = cv2.imencode('.png', processed_img)
+        img_bytes_processed = buffer.tobytes()
+
+        # Encode to base64
+        base64_string = base64.b64encode(img_bytes_processed).decode("utf-8")
+
+        return base64_string
+    except Exception as e:
+        raise

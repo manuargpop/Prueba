@@ -4,20 +4,17 @@ from fastapi import HTTPException
 from .config import settings
 
 
-def build_prompt_cedula(raw_text: str) -> str:
-    return f"""
-Eres un asistente experto en normalización y extracción de datos de documentos de identidad a partir de texto OCR, con especialización en cédulas venezolanas.
+def build_prompt_cedula() -> str:
+    return """
+Eres un asistente experto en análisis y extracción de datos de documentos de identidad a partir de imágenes, con especialización en cédulas venezolanas.
 
-TEXTO OCR DE ENTRADA:
-{raw_text}
-
-INSTRUCCIONES:
+ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones:
 
 1. CLASIFICACIÓN DEL DOCUMENTO:
-- Analiza el texto para determinar si corresponde a una Cédula de Identidad venezolana.
+- Determina si la imagen corresponde a una Cédula de Identidad venezolana.
 - Indicadores de cédula venezolana: "CÉDULA DE IDENTIDAD", "REPÚBLICA BOLIVARIANA DE VENEZUELA", "SAIME", cédula con formato V/E + dígitos, campos típicos (nacionalidad: VENEZOLANO/A).
-- Si el texto corresponde a una cédula/ID de OTRO país o no se puede determinar con certeza: establece `cedula_ven: false` pero CONTINÚA con la extracción de todos los campos posibles.
-- Solo si el texto es completamente irreconocible, no es un documento de identidad, o está vacío: devuelve todos los campos en null y `cedula_ven: false`.
+- Si la imagen corresponde a una cédula/ID de OTRO país o no se puede determinar con certeza: establece `cedula_ven: false` pero CONTINÚA con la extracción de todos los campos posibles.
+- Solo si la imagen es completamente irreconocible, no es un documento de identidad, o está vacía: devuelve todos los campos en null y `cedula_ven: false`.
 
 2. EXTRACCIÓN Y NORMALIZACIÓN (aplica en todos los casos):
 - cedula: Formato "V" o "E" + 6 a 8 dígitos si es venezolana. La letra inicial de la cédula debe ser V si la nacionalidad es venezolana, o E si la nacionalidad es extranjera. Limpia espacios, puntos, comas.
@@ -39,7 +36,7 @@ INSTRUCCIONES:
 - Si un campo no está presente o es ilegible, asigna null.
 - NO uses bloques de código (```json), NO añadas explicaciones, NO incluyas texto antes o después del JSON.
 
-{{
+{
   "cedula_ven": "bool",
   "cedula": "string o null",
   "nombre": "string o null",
@@ -50,46 +47,25 @@ INSTRUCCIONES:
   "fecha_emision": "DD/MM/AAAA o null",
   "fecha_expiracion": "MM/AAAA o null",
   "expiro": "bool"
-}}
-
-EJEMPLOS:
-
-Entrada (cédula venezolana):
-OCR: eiGe Oen 4 De VEnerudL4 C € D U L a 0 1d @Nid Ad 29,546.994 ARAUJO FERNANDEZ JOSIELY PAOLA 04/10/2000 SOLTERA VENEZOLANO
-Salida: {{"cedula_ven":true,"cedula":"V29546994","nombre":"JOSIELY PAOLA","apellido":"ARAUJO FERNANDEZ","nacionalidad":"VENEZOLANO","fecha_nacimiento":"04/10/2000","estado_civil":"SOLTERO","fecha_emision":null,"fecha_expiracion":null,"expiro":null}}
-
-
-Entrada (cédula extranjera - ej. colombiana):
-OCR: REPUBLICA DE COLOMBIA CEDULA DE CIUDADANIA 1.098.765.432 NOMBRE: MARIA LOPEZ GOMEZ 15/03/1990 COLOMBIANA
-Salida: {{"cedula_ven":false,"cedula":"1098765432","nombre":"MARIA","apellido":" LOPEZ GOMEZ","nacionalidad":"COLOMBIANA","fecha_nacimiento":"15/03/1990","estado_civil":null,"fecha_emision":null,"fecha_expiracion":null,"expiro":null}}
-
-Entrada (documento irreconocible):
-OCR: factura de servicios publicos numero 445-22
-Salida: {{"cedula_ven":false,"cedula":null,"nombre":null,"apellido":null,"nacionalidad":null,"fecha_nacimiento":null,"estado_civil":null,"fecha_emision":null,"fecha_expiracion":null,"expiro":null}}
-
-Caso directivo (nombres de funcionarios del SAIME):
-OCR:Ropuolica Dolivariana de Venezuoua STPV PELRANLLDAD E 81.241,.717 152 DuPRAT ROJAS Juan Dugarto Docto GlaDYS OlVIA 01/07/1043 Soltera 1 22/10/2013 04/2017 UAn 1 Kesolil Cn4O CH  2n JULADo EXTRANJERO
-Salida: {{"cedula_ven":true,"cedula":"E81241717","nombre":"GLADYS OLIVIA","apellido":"DUPRAT ROJAS","nacionalidad":"EXTRANJERO","fecha_nacimiento":"01/07/1943","estado_civil":"SOLTERO","fecha_emision":"22/10/2013","fecha_expiracion":"04/2017","expiro":true}}
+}
 """
 
-def build_prompt_rif(raw_text: str) -> str:
-    return f"""
-Eres un asistente experto en normalización y extracción de datos de documentos fiscales a partir de texto OCR, con especialización en RIF (Registro Único de Información Fiscal) de Venezuela.
 
-TEXTO OCR DE ENTRADA:
-{raw_text}
+def build_prompt_rif() -> str:
+    return """
+Eres un asistente experto en análisis y extracción de datos de documentos fiscales a partir de imágenes, con especialización en RIF (Registro Único de Información Fiscal) de Venezuela.
 
-INSTRUCCIONES:
+ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones:
 
 1. CLASIFICACIÓN DEL DOCUMENTO:
-- Analiza el texto para determinar si corresponde a un RIF venezolano.
+- Determina si la imagen corresponde a un RIF venezolano.
 - Indicadores de RIF venezolano: "REGISTRO ÚNICO DE INFORMACIÓN FISCAL", "RIF", "SENIAT", formato de RIF con letra inicial (V/E/J/G) + 9 dígitos.
-- Si el texto NO corresponde a un RIF o no se puede determinar: establece `rif_valido: false` pero CONTINÚA con la extracción de todos los campos posibles.
-- Solo si el texto es completamente irreconocible, no es un documento fiscal, o está vacío: devuelve todos los campos en null y `rif_valido: false`.
+- Si la imagen NO corresponde a un RIF o no se puede determinar: establece `rif_valido: false` pero CONTINÚA con la extracción de todos los campos posibles.
+- Solo si la imagen es completamente irreconocible, no es un documento fiscal, o está vacía: devuelve todos los campos en null y `rif_valido: false`.
 
 2. EXTRACCIÓN Y NORMALIZACIÓN (aplica en todos los casos):
 - rif: Formato con letra inicial (V, E, J, G) + 9 dígitos. Limpia espacios, puntos, comas. La letra indica: V=Venezolano, E=Extranjero, J=Jurídica, G=Gubernamental.
-- nombre: Conserva caracteres originales. Elimina ruido OCR (@, #, *, espacios dobles). Normaliza a MAYÚSCULAS. No inventes ni completes. Puede ser nombre de persona natural o razón social de empresa.
+- nombre: Conserva caracteres originales. Elimina ruido (@, #, *, espacios dobles). Normaliza a MAYÚSCULAS. No inventes ni completes. Puede ser nombre de persona natural o razón social de empresa.
 - direccion: Extrae la dirección completa del domicilio fiscal. Incluye calles, edificios, pisos, apartamentos, sectores, etc. Normaliza a MAYÚSCULAS.
 - ciudad: Extrae la ciudad/municipio. Normaliza a MAYÚSCULAS.
 - estado: Extrae el estado. Normaliza a MAYÚSCULAS.
@@ -107,7 +83,7 @@ INSTRUCCIONES:
 - Si un campo no está presente o es ilegible, asigna null.
 - NO uses bloques de código (```json), NO añadas explicaciones, NO incluyas texto antes o después del JSON.
 
-{{
+{
   "rif_valido": "bool",
   "rif": "string o null",
   "nombre": "string o null",
@@ -115,37 +91,21 @@ INSTRUCCIONES:
   "ciudad": "string o null",
   "direccion": "string o null",
   "expiro": "bool o null"
-}}
-
-EJEMPLOS:
-
-Entrada (RIF de persona natural):
-OCR: Republica Bolivariana de Venezuela SENIAT REGISTRO ÚNICO DE INFORMACIÓN FISCAL (RIF) V278424924 MANUEL ALEXANDER VALBUENA RODRIGUEZ FECHA DE INSCRIPCION DOMICILIO FISCAL CALLE CALLE 73 EDIF HALEAKALA PISO PB APT APTO. 3 SECTOR LA LAGO MARACAIBO ZULIA ZONA POSTAL 4001 FECHA DE VENCIMIENTO 15/12/2025
-Salida: {{"rif_valido":true,"rif":"V278424924","nombre":"MANUEL ALEXANDER VALBUENA RODRIGUEZ","estado":"ZULIA","ciudad":"MARACAIBO","direccion":"CALLE CALLE 73 EDIF HALEAKALA PISO PB APT APTO. 3 SECTOR LA LAGO","expiro":false}}
-
-Entrada (RIF de empresa):
-OCR: REPUBLICA BOLIVARIANA DE VENEZUELA SENIAT REGISTRO UNICO DE INFORMACION FISCAL J123456789 EMPRESA EJEMPLO C.A. DOMICILIO FISCAL AV PRINCIPAL EDIF CORPORATIVO PISO 5 CARACAS DISTRITO CAPITAL VENCIMIENTO 30/06/2024
-Salida: {{"rif_valido":true,"rif":"J123456789","nombre":"EMPRESA EJEMPLO C.A.","estado":"DISTRITO CAPITAL","ciudad":"CARACAS","direccion":"AV PRINCIPAL EDIF CORPORATIVO PISO 5","expiro":true}}
-
-Entrada (documento irreconocible):
-OCR: factura de servicios publicos numero 445-22
-Salida: {{"rif_valido":false,"rif":null,"nombre":null,"estado":null,"ciudad":null,"direccion":null,"expiro":null}}
+}
 """
 
-def build_prompt_carnet(raw_text: str) -> str:
-    return f"""
-Eres un asistente experto en normalización y extracción de datos de documentos vehiculares a partir de texto OCR, con especialización en el Certificado de Registro de Vehículo (Carnet de Circulación) de Venezuela emitido por el INTT.
 
-TEXTO OCR DE ENTRADA:
-{raw_text}
+def build_prompt_carnet() -> str:
+    return """
+Eres un asistente experto en análisis y extracción de datos de documentos vehiculares a partir de imágenes, con especialización en el Certificado de Registro de Vehículo (Carnet de Circulación) de Venezuela emitido por el INTT.
 
-INSTRUCCIONES:
+ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones:
 
 1. CLASIFICACIÓN DEL DOCUMENTO:
-- Analiza el texto para determinar si corresponde a un Carnet de Circulación / Certificado de Registro de Vehículo venezolano.
+- Determina si la imagen corresponde a un Carnet de Circulación / Certificado de Registro de Vehículo venezolano.
 - Indicadores de carnet válido: "INTT", "INSTITUTO NACIONAL DE TRANSPORTE TERRESTRE", "CERTIFICADO DE REGISTRO DE VEHÍCULO", "CERTIFICADO DE CIRCULACIÓN", campos típicos como Placa, Serial, Carrozado, Motor, Modelo, Marca, Año, Color, Nro. Puestos/PTOS.
-- Si el texto NO corresponde a un carnet vehicular o no se puede determinar: establece `carnet_valido: false` pero CONTINÚA con la extracción de todos los campos posibles.
-- Solo si el texto es completamente irreconocible, no es un documento vehicular, o está vacío: devuelve todos los campos en null y `carnet_valido: false`.
+- Si la imagen NO corresponde a un carnet vehicular o no se puede determinar: establece `carnet_valido: false` pero CONTINÚA con la extracción de todos los campos posibles.
+- Solo si la imagen es completamente irreconocible, no es un documento vehicular, o está vacía: devuelve todos los campos en null y `carnet_valido: false`.
 
 2. EXTRACCIÓN Y NORMALIZACIÓN (aplica en todos los casos):
 - placa: Formato típico venezolano: 2-3 letras seguidas de 4-6 dígitos, o combinaciones alfanuméricas (ej: AD313UV, ABC123, A123BC). Limpia espacios, puntos, comas. Normaliza a MAYÚSCULAS. No inventes caracteres.
@@ -164,46 +124,38 @@ INSTRUCCIONES:
 - Si un campo no está presente o es ilegible, asigna null.
 - NO uses bloques de código (```json), NO añadas explicaciones, NO incluyas texto antes o después del JSON.
 
-{{
+{
   "carnet_valido": "bool",
   "placa": "string o null",
   "cedula_rif": "string o null",
   "pasajeros": "int o null"
-}}
-
-EJEMPLOS:
-
-Entrada (carnet válido):
-OCR: INTT INSTITUTO NACIONAL DE TRANSPORTE TERRESTRE CERTIFICADO DE REGISTRO DE VEHÍCULO YOLEMAR TERESA GALLARDO PEROZO Cédula O RIF: V19215064 Placa: AD313UV Serial 8X7F1B117CD004432 Nro. Puestos: 5 PTOS CHERY ARAUCA 2012 PLATA AUTOMOVIL PARTICULAR
-Salida: {{"carnet_valido":true,"placa":"AD313UV","cedula_rif":"V19215064","pasajeros":5}}
-
-Entrada (carnet con formato alternativo):
-OCR: CERTIFICADO DE CIRCULACIÓN INTT Placa ABC123 Propietario JUAN PEREZ RIF: V12345678 Capacidad 7 Puestos Serial Motor SQRA73FAFCC02027 Uso PARTICULAR
-Salida: {{"carnet_valido":true,"placa":"ABC123","cedula_rif":"V12345678","pasajeros":7}}
-
-Entrada (documento irreconocible):
-OCR: factura de servicios publicos numero 445-22
-Salida: {{"carnet_valido":false,"placa":null,"cedula_rif":null,"pasajeros":null}}
-
-Entrada (carnet con ruido y valores repetidos):
-OCR: INTT INTT 220108199862 AD313UV BX7FIB117CD004432 YOLEMAR TERESA GALLARDO PEROZO V19215064 CHERY ARAUCA 2012 PLATA AUTOMOVIL HATCH BACK PARTICULAR 5 PTOS Nro. Puestos: 5 Gobierno Bolivariano de Venezuela Ministerio del Transporte Certificado de Circulación Para ser archivado en lugar seguro Válido para transitar con el vehículo en el Territorio Nacional Placa AD313UV
-Salida: {{"carnet_valido":true,"placa":"AD313UV","cedula_rif":"V19215064","pasajeros":5}}
+}
 """
 
-def get_prompt(doc_type: str, raw_text: str) -> str:
+
+def get_prompt(doc_type: str) -> str:
     if doc_type == "cedula":
-        return build_prompt_cedula(raw_text)
+        return build_prompt_cedula()
     elif doc_type == "rif":
-        return build_prompt_rif(raw_text)
+        return build_prompt_rif()
     elif doc_type == "carnet":
-        return build_prompt_carnet(raw_text)
+        return build_prompt_carnet()
     return ""
 
-def call_llm(raw_text: str, doc_type: str = "cedula") -> str:
-    prompt = get_prompt(doc_type, raw_text)
 
-    # 🛡️ Seguridad: Si el prompt está vacío (RIF o Carnet), devolvemos "{}" 
-    # para evitar que el LLM falle mientras terminas de configurarlos.
+def call_llm_with_image(image_base64: str, doc_type: str = "cedula") -> str:
+    """
+    Call Qwen3.6-27B vision model with image and prompt.
+
+    Args:
+        image_base64: Base64 encoded image string
+        doc_type: Type of document (cedula, rif, carnet)
+
+    Returns:
+        JSON string response from the model
+    """
+    prompt = get_prompt(doc_type)
+
     if not prompt.strip():
         return "{}"
 
@@ -217,11 +169,28 @@ def call_llm(raw_text: str, doc_type: str = "cedula") -> str:
         },
         "json": {
             "model": settings.GROQ_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.0,
-            "max_tokens": 1500,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "temperature": 0.6,
+            "max_tokens": 4096,
+            "top_p": 0.95,
         },
-        "timeout": 30,
+        "timeout": 60,
         "verify": settings.GROQ_VERIFY_SSL,
     }
     if settings.REQUESTS_CA_BUNDLE:
@@ -229,19 +198,18 @@ def call_llm(raw_text: str, doc_type: str = "cedula") -> str:
 
     try:
         res = requests.post("https://api.groq.com/openai/v1/chat/completions", **request_options)
+
         res.raise_for_status()
+        print(f"\n[INFO] Full Groq Response:\n{res.text}\n")
         response_data = res.json()
     except requests.exceptions.SSLError as e:
-        print("SSL Error:", str(e))
         raise HTTPException(
             502,
             "Error de SSL al contactar Groq. Si estás en un entorno local, revisa tu CA o usa GROQ_VERIFY_SSL=false solo para desarrollo.",
         )
     except requests.exceptions.RequestException as e:
-        print("Request Error:", str(e))
         raise HTTPException(500, f"Error en LLM: {str(e)}")
 
-    print("LLM Response:", response_data)
     if not isinstance(response_data, dict):
         raise HTTPException(502, "Respuesta inválida del modelo de IA")
 

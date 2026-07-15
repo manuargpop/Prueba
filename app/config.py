@@ -15,7 +15,7 @@ class Settings:
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     GROQ_VERIFY_SSL: bool = _get_bool_env("GROQ_VERIFY_SSL", True)
     REQUESTS_CA_BUNDLE: str | None = os.getenv("REQUESTS_CA_BUNDLE")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
 
 
 settings = Settings()

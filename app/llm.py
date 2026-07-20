@@ -1,11 +1,13 @@
 import json
 import requests
 from fastapi import HTTPException
+from datetime import datetime
 from .config import settings
 
 
 def build_prompt_cedula() -> str:
-    return """
+    current_date = datetime.now().strftime("%d/%m/%Y")
+    return f"""
 Eres un asistente experto en análisis y extracción de datos de documentos de identidad a partir de imágenes, con especialización en cédulas venezolanas.
 
 ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones:
@@ -22,8 +24,9 @@ ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones
 - fecha_nacimiento / fecha_emision: Formato "DD/MM/AAAA". Si el año tiene 2 dígitos, infiere siglo más probable. Si es ilegible: null.
 - fecha_expiracion: Formato "MM/AAAA" o "AAAA". Si no está presente: null.
 - estado_civil: Valores permitidos: SOLTERO/A, CASADO/A, DIVORCIADO/A, VIUDO/A. Normaliza a MAYÚSCULAS. De ser en femenino pasar a masculino. Si no aplica o no aparece: null.
+- sexo: Extrae el género basado en el estado civil. Si el estado civil termina en "A" (SOLTERA, CASADA, DIVORCIADA, VIUDA) devuelve "F". Si termina en "O" (SOLTERO, CASADO, DIVORCIADO, VIUDO) devuelve "M". Si estado_civil es null o no se puede determinar: null.
 - nacionalidad: Extrae literalmente (VENEZOLANO, COLOMBIANO, EXTRANJERO, etc.). Si dice "VENEZOLANA", normaliza a "VENEZOLANO" solo en este campo.
-- expiro: Si la fecha de expiracion de la poliza es identica o menor a la fecha actual devuelve true, de lo contrario false.
+- expiro: Compara la fecha_expiracion con la fecha actual ({current_date}). Si la fecha de expiración es idéntica o menor a la fecha actual devuelve true, de lo contrario false.
 
 3. FILTRADO DE RUIDO:
 - MUI IMPORTANTE: Ignora EXPLÍCITAMENTE los nombres de directores/funcionarios del SAIME. Estos NUNCA deben ir en `nombre` o `apellido`. Nombres conocidos a descartar: Hendrick Jose Perdomo Colmenares, Gustavo Vizcaino, Dante Rivas, Hugo Cabezas, Pedro Rodriguez, Juan Dugarte O Juan Dugarto y cualquier variación similar que aparezca como firma o cargo institucional.
@@ -36,7 +39,7 @@ ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones
 - Si un campo no está presente o es ilegible, asigna null.
 - NO uses bloques de código (```json), NO añadas explicaciones, NO incluyas texto antes o después del JSON.
 
-{
+{{
   "cedula_ven": "bool",
   "cedula": "string o null",
   "nombre": "string o null",
@@ -44,15 +47,18 @@ ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones
   "nacionalidad": "string o null",
   "fecha_nacimiento": "DD/MM/AAAA o null",
   "estado_civil": "string o null",
+  "sexo": "M o F o null",
   "fecha_emision": "DD/MM/AAAA o null",
   "fecha_expiracion": "MM/AAAA o null",
   "expiro": "bool"
-}
+}}
 """
 
 
 def build_prompt_rif() -> str:
-    return """
+    current_date = datetime.now().strftime("%d/%m/%Y")
+    return ""
+"""
 Eres un asistente experto en análisis y extracción de datos de documentos fiscales a partir de imágenes, con especialización en RIF (Registro Único de Información Fiscal) de Venezuela.
 
 ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones:
@@ -70,7 +76,7 @@ ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones
 - ciudad: Extrae la ciudad/municipio. Normaliza a MAYÚSCULAS.
 - estado: Extrae el estado. Normaliza a MAYÚSCULAS.
 - fecha_vencimiento: Formato "DD/MM/AAAA". Busca "FECHA DE VENCIMIENTO" o "VENCIMIENTO". Si es ilegible: null.
-- expiro: Si la fecha de vencimiento es idéntica o menor a la fecha actual devuelve true, de lo contrario false. Si no hay fecha: null.
+- expiro: Compara la fecha_vencimiento con la fecha actual ({current_date}). Si la fecha de vencimiento es idéntica o menor a la fecha actual devuelve true, de lo contrario false. Si no hay fecha: null.
 
 3. FILTRADO DE RUIDO:
 - MUY IMPORTANTE: Ignora EXPLÍCITAMENTE el texto de pie de página (footer) como: "La validez de este Comprobante debe verificarse través de la dirección www.seniat.gob.ve", "Sistemas en", "Comprobante Digital RIF", "No requiere sello húmedo", "GERENCIA REGIONAL DE TRIBUTOS INTERNOS", nombres de oficinas del SENIAT.
@@ -83,7 +89,7 @@ ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones
 - Si un campo no está presente o es ilegible, asigna null.
 - NO uses bloques de código (```json), NO añadas explicaciones, NO incluyas texto antes o después del JSON.
 
-{
+{{
   "rif_valido": "bool",
   "rif": "string o null",
   "nombre": "string o null",
@@ -91,12 +97,13 @@ ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones
   "ciudad": "string o null",
   "direccion": "string o null",
   "expiro": "bool o null"
-}
+}}
 """
 
 
 def build_prompt_carnet() -> str:
-    return """
+    return ""
+"""
 Eres un asistente experto en análisis y extracción de datos de documentos vehiculares a partir de imágenes, con especialización en el Certificado de Registro de Vehículo (Carnet de Circulación) de Venezuela emitido por el INTT.
 
 ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones:
@@ -197,8 +204,10 @@ def call_llm_with_image(image_base64: str, doc_type: str = "cedula") -> str:
         request_options["verify"] = settings.REQUESTS_CA_BUNDLE
 
     try:
+        print("intento")
         res = requests.post("https://api.groq.com/openai/v1/chat/completions", **request_options)
 
+        print(res)
         res.raise_for_status()
         print(f"\n[INFO] Full Groq Response:\n{res.text}\n")
         response_data = res.json()

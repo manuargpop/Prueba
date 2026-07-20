@@ -10,6 +10,7 @@ class CedulaData(BaseModel):
     nacionalidad: Optional[str] = None
     fecha_nacimiento: Optional[str] = None
     estado_civil: Optional[str] = None
+    sexo: Optional[str] = None
     fecha_emision: Optional[str] = None
     fecha_expiracion: Optional[str] = None
     cedula_ven: Optional[bool] = None

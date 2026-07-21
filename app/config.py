@@ -12,10 +12,11 @@ def _get_bool_env(name: str, default: bool = True) -> bool:
 
 
 class Settings:
-    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_VERIFY_SSL: bool = _get_bool_env("GROQ_VERIFY_SSL", True)
+    ALIBABA_API_KEY: str = os.getenv("ALIBABA_API_KEY", "")
+    ALIBABA_BASE_URL: str = os.getenv("ALIBABA_BASE_URL", "y aqui el link de la apykey")
+    ALIBABA_VERIFY_SSL: bool = _get_bool_env("ALIBABA_VERIFY_SSL", True)
     REQUESTS_CA_BUNDLE: str | None = os.getenv("REQUESTS_CA_BUNDLE")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
+    ALIBABA_MODEL: str = os.getenv("ALIBABA_MODEL", "qwen3.7-plus")
 
 
 settings = Settings()

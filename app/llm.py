@@ -1,7 +1,8 @@
-import json
+import base64
 import requests
 from fastapi import HTTPException
 from datetime import datetime
+from openai import OpenAI
 from .config import settings
 
 
@@ -131,12 +132,12 @@ ANALIZA LA IMAGEN ADJUNTA y extrae la información siguiendo estas instrucciones
 - Si un campo no está presente o es ilegible, asigna null.
 - NO uses bloques de código (```json), NO añadas explicaciones, NO incluyas texto antes o después del JSON.
 
-{
+{{
   "carnet_valido": "bool",
   "placa": "string o null",
   "cedula_rif": "string o null",
   "pasajeros": "int o null"
-}
+}}
 """
 
 
@@ -152,7 +153,7 @@ def get_prompt(doc_type: str) -> str:
 
 def call_llm_with_image(image_base64: str, doc_type: str = "cedula") -> str:
     """
-    Call Qwen3.6-27B vision model with image and prompt.
+    Call Qwen model via Alibaba Model Studio using OpenAI-compatible API.
 
     Args:
         image_base64: Base64 encoded image string
@@ -166,70 +167,63 @@ def call_llm_with_image(image_base64: str, doc_type: str = "cedula") -> str:
     if not prompt.strip():
         return "{}"
 
-    if not settings.GROQ_API_KEY:
-        raise HTTPException(500, "GROQ_API_KEY no configurada")
-
-    request_options = {
-        "headers": {
-            "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        "json": {
-            "model": settings.GROQ_MODEL,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": prompt
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{image_base64}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            "temperature": 0.6,
-            "max_tokens": 4096,
-            "top_p": 0.95,
-        },
-        "timeout": 60,
-        "verify": settings.GROQ_VERIFY_SSL,
-    }
-    if settings.REQUESTS_CA_BUNDLE:
-        request_options["verify"] = settings.REQUESTS_CA_BUNDLE
+    if not settings.ALIBABA_API_KEY:
+        raise HTTPException(500, "ALIBABA_API_KEY no configurada")
 
     try:
-        print("intento")
-        res = requests.post("https://api.groq.com/openai/v1/chat/completions", **request_options)
-
-        print(res)
-        res.raise_for_status()
-        print(f"\n[INFO] Full Groq Response:\n{res.text}\n")
-        response_data = res.json()
-    except requests.exceptions.SSLError as e:
-        raise HTTPException(
-            502,
-            "Error de SSL al contactar Groq. Si estás en un entorno local, revisa tu CA o usa GROQ_VERIFY_SSL=false solo para desarrollo.",
+        print("Enviando request a alibaba")
+        # Initialize OpenAI client with Alibaba's compatible endpoint
+        client = OpenAI(
+            api_key=settings.ALIBABA_API_KEY,
+            base_url=settings.ALIBABA_BASE_URL,
         )
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(500, f"Error en LLM: {str(e)}")
 
-    if not isinstance(response_data, dict):
-        raise HTTPException(502, "Respuesta inválida del modelo de IA")
+        # Prepare the message with image in OpenAI-compatible format
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                    }
+                ]
+            }
+        ]
 
-    choices = response_data.get("choices")
-    if not choices or not isinstance(choices, list):
-        raise HTTPException(502, "Respuesta inválida del modelo de IA")
+        # Call the model
+        completion = client.chat.completions.create(
+            model=settings.ALIBABA_MODEL,
+            messages=messages,
+            temperature=0.6,
+            max_tokens=4096,
+            top_p=0.95,
+        )
 
-    first_choice = choices[0]
-    message = first_choice.get("message") if isinstance(first_choice, dict) else None
-    content = message.get("content") if isinstance(message, dict) else None
-    if not isinstance(content, str):
-        raise HTTPException(502, "Respuesta inválida del modelo de IA")
+        # Extract the response content
+        content = completion.choices[0].message.content
 
-    return content.strip()
+        # 🔍 DEBUG: Print raw response from Alibaba Qwen
+        print("\n" + "="*50)
+        print("🤖 RAW LLM RESPONSE (Alibaba Qwen):")
+        print("="*50)
+        if content:
+            print(content)
+        else:
+            print("⚠️ No content in response!")
+        print("="*50 + "\n")
+
+        if not isinstance(content, str):
+            raise HTTPException(502, "Respuesta inválida del modelo de IA")
+
+        return content.strip()
+
+    except Exception as e:
+        error_msg = str(e)
+        if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+            raise HTTPException(500, "Error de autenticación con Alibaba Model Studio. Verifica tu API key.")
+        elif "model" in error_msg.lower():
+            raise HTTPException(500, f"Error con el modelo {settings.ALIBABA_MODEL}. Verifica que tengas acceso a este modelo.")
+        else:
+            raise HTTPException(500, f"Error en LLM: {error_msg}")
